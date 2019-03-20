@@ -1,7 +1,13 @@
 package com.binglihub.kafka
 
+import java.io.ByteArrayOutputStream
+
 import com.binglihub.kafka.producer.Mode.Mode
 import com.fasterxml.jackson.databind.ObjectMapper
+import org.apache.avro.Schema
+import org.apache.avro.file.DataFileWriter
+import org.apache.avro.generic.{GenericData, GenericDatumWriter, GenericRecord}
+import org.apache.avro.io.EncoderFactory
 
 import scala.util.Random
 
@@ -13,7 +19,7 @@ package object producer {
 
   def generateKey: String = Random.alphanumeric take 10 mkString
 
-  def generateValue(mode: Mode): String =
+  def generateJsonValue(mode: Mode): String =
     mode match {
       case Mode.RAND_1 => //int,long,double,text,boolean
         val obj = mapper.createObjectNode()
@@ -23,5 +29,27 @@ package object producer {
         obj.put("text", Random.nextString(20))
         obj.put("boolean", Random.nextBoolean())
         obj.toString
+    }
+
+  def generateAvroValue(mode: Mode, schema: Schema): Array[Byte] =
+    mode match {
+      case Mode.RAND_1 =>
+        val record = new GenericData.Record(schema)
+        record.put("int", Random.nextInt())
+        record.put("long", Random.nextLong())
+        record.put("double", Random.nextDouble())
+        record.put("string", Random.nextString(20))
+        record.put("boolean", Random.nextBoolean())
+
+        val writer = new GenericDatumWriter[GenericRecord](schema)
+        val output = new ByteArrayOutputStream()
+        val fileWriter = new DataFileWriter[GenericRecord](writer)
+        fileWriter.create(schema,output)
+
+        fileWriter.append(record)
+        fileWriter.flush()
+        fileWriter.close()
+
+        output.toByteArray
     }
 }
