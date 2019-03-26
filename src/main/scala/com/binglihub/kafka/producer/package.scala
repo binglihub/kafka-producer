@@ -51,5 +51,26 @@ package object producer {
         fileWriter.close()
 
         output.toByteArray
+
+      case Mode.AVRO_GROUP =>
+        val writer = new GenericDatumWriter[GenericRecord](schema)
+        val output = new ByteArrayOutputStream()
+        val fileWriter = new DataFileWriter[GenericRecord](writer)
+        fileWriter.create(schema,output)
+
+        (0 until 10).foreach(_=>{
+          val record = new GenericData.Record(schema)
+          record.put("int", Random.nextInt())
+          record.put("long", Random.nextLong())
+          record.put("double", Random.nextDouble())
+          record.put("string", Random.nextString(20))
+          record.put("boolean", Random.nextBoolean())
+          fileWriter.append(record)
+        })
+        
+        fileWriter.flush()
+        fileWriter.close()
+
+        output.toByteArray
     }
 }
